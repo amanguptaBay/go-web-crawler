@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"net/url"
 
 	"golang.org/x/net/html"
 )
@@ -11,8 +12,13 @@ import (
 Given a url (full url, includes protocol)
 Returns the links from the page
 */
-func getLinksFromPage(url string) (links []string) {
-	res, err := http.Get(url)
+func getLinksFromPage(urlString string) (links []string) {
+	urlParsed, err := url.Parse(urlString)
+	if err != nil {
+		return
+	}
+
+	res, err := http.Get(urlString)
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -20,7 +26,7 @@ func getLinksFromPage(url string) (links []string) {
 	defer res.Body.Close()
 
 	tokenIterator := html.NewTokenizer(res.Body)
-
+TokenLoop:
 	for {
 		tokenType := tokenIterator.Next()
 
@@ -29,9 +35,14 @@ func getLinksFromPage(url string) (links []string) {
 			return
 		case tokenType == html.StartTagToken:
 			token := tokenIterator.Token()
-			val, ok := getAttributeValue(token.Attr, "href")
+			val, ok := getAttributeValue(&token.Attr, "href")
 			if ok {
-				links = append(links, val)
+				valsParsed, err := url.Parse(val)
+				if err != nil {
+					continue TokenLoop
+				}
+				absoluteURL := urlParsed.ResolveReference(valsParsed)
+				links = append(links, absoluteURL.String())
 			}
 		}
 	}
@@ -43,8 +54,8 @@ Given a list of attributes, find the attribute (attributeKey) from the list of a
 Returns value of the attribute, or empty string
 Returns a valid bit as well
 */
-func getAttributeValue(attributes []html.Attribute, attributeKey string) (string, bool) {
-	for _, attribute := range attributes {
+func getAttributeValue(attributes *[]html.Attribute, attributeKey string) (string, bool) {
+	for _, attribute := range *attributes {
 		if attribute.Key == attributeKey {
 			return attribute.Val, true
 		}

@@ -12,4 +12,5 @@ func main() {
 	for link := range strings {
 		fmt.Println(strings[link])
 	}
+
 }
