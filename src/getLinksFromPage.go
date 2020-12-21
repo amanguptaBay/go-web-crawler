@@ -13,8 +13,6 @@ type (
 	URL = url.URL
 )
 
-//TODO: Represent URLs as URLs and not Strings (reduces parsing required, keeps urls in a cleaner format)
-
 //LinksFromPage takes a url as a string (must include the protocol)
 //Returns a list of urls from the page
 //Parameter and returned urls are fully formed
