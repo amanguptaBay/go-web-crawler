@@ -2,32 +2,31 @@ package main
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"net/url"
 
 	"golang.org/x/net/html"
 )
 
-/*
-Given a url (full url, includes protocol)
-Returns the links from the page
-*/
-func getLinksFromPage(urlString string) (links []string) {
-	urlParsed, err := url.Parse(urlString)
-	if err != nil {
-		return
-	}
+type (
+	//URL the type that URLs are in throughout this system
+	URL = url.URL
+)
 
-	res, err := http.Get(urlString)
+//TODO: Represent URLs as URLs and not Strings (reduces parsing required, keeps urls in a cleaner format)
+
+//LinksFromPage takes a url as a string (must include the protocol)
+//Returns a list of urls from the page
+//Parameter and returned urls are fully formed
+func LinksFromPage(urlStart URL) (links []URL) {
+	res, err := http.Get(urlStart.String())
 	if err != nil {
-		log.Fatal(err)
 		return
 	}
 	defer res.Body.Close()
-
 	tokenIterator := html.NewTokenizer(res.Body)
-TokenLoop:
+
+FetchNextToken:
 	for {
 		tokenType := tokenIterator.Next()
 
@@ -39,16 +38,16 @@ TokenLoop:
 
 			newLinkString, linkFoundError := getAttributeValue(&token.Attr, "href")
 			if linkFoundError != nil {
-				continue TokenLoop
+				continue FetchNextToken
 			}
 
 			newLinkURL, newLinkParsable := url.Parse(newLinkString)
 			if newLinkParsable != nil {
-				continue TokenLoop
+				continue FetchNextToken
 			}
 
-			newLinkAbsolute := urlParsed.ResolveReference(newLinkURL)
-			links = append(links, newLinkAbsolute.String())
+			newLinkAbsolute := urlStart.ResolveReference(newLinkURL)
+			links = append(links, *newLinkAbsolute)
 		}
 	}
 }
