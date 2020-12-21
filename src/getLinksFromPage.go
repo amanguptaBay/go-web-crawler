@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"net/url"
@@ -35,18 +36,21 @@ TokenLoop:
 			return
 		case tokenType == html.StartTagToken:
 			token := tokenIterator.Token()
-			val, ok := getAttributeValue(&token.Attr, "href")
-			if ok {
-				valsParsed, err := url.Parse(val)
-				if err != nil {
-					continue TokenLoop
-				}
-				absoluteURL := urlParsed.ResolveReference(valsParsed)
-				links = append(links, absoluteURL.String())
+
+			newLinkString, linkFoundError := getAttributeValue(&token.Attr, "href")
+			if linkFoundError != nil {
+				continue TokenLoop
 			}
+
+			newLinkURL, newLinkParsable := url.Parse(newLinkString)
+			if newLinkParsable != nil {
+				continue TokenLoop
+			}
+
+			newLinkAbsolute := urlParsed.ResolveReference(newLinkURL)
+			links = append(links, newLinkAbsolute.String())
 		}
 	}
-
 }
 
 /*
@@ -54,11 +58,11 @@ Given a list of attributes, find the attribute (attributeKey) from the list of a
 Returns value of the attribute, or empty string
 Returns a valid bit as well
 */
-func getAttributeValue(attributes *[]html.Attribute, attributeKey string) (string, bool) {
+func getAttributeValue(attributes *[]html.Attribute, attributeKey string) (string, error) {
 	for _, attribute := range *attributes {
 		if attribute.Key == attributeKey {
-			return attribute.Val, true
+			return attribute.Val, nil
 		}
 	}
-	return "", false
+	return "", errors.New("getAttributeValue(): No attribute " + attributeKey + " found")
 }
