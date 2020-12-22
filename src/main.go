@@ -1,9 +1,23 @@
 package main
 
 import (
+	"bufio"
 	"log"
 	"net/url"
+	"os"
 )
+
+func runCrawl(firstURL URL) {
+	cache := map[URL]bool{}
+	results := crawl(
+		[]URL{firstURL},
+		cache,
+	)
+
+	for parentURL, links := range results {
+		log.Println(parentURL, len(links))
+	}
+}
 
 func main() {
 	//content, _ := fetchPage()
@@ -17,19 +31,17 @@ func main() {
 	// for link := range strings {
 	// 	fmt.Println(strings[link].String())
 	// }
+	//http://www.ics.uci.edu/~thornton/ics45c/ProjectGuide/
 	log.Println("Crawler")
 
-	firstURL, ok := url.Parse("http://www.ics.uci.edu/~thornton/ics45c/ProjectGuide/")
+	reader := bufio.NewReader(os.Stdin)
+	text, _ := reader.ReadString('\n')
+	firstURL, ok := url.Parse(text)
+
 	if ok != nil {
 		log.Fatal("Error parsing first URL")
 		return
 	}
 
-	results := crawl(
-		[]URL{*firstURL},
-	)
-
-	for parentURL, links := range results {
-		log.Println(parentURL, len(links))
-	}
+	runCrawl(*firstURL)
 }

@@ -1,47 +1,34 @@
 package main
 
 import (
-	"log"
-	"net/url"
+	"time"
 )
 
-//TODO: Implement Crawling Logic
-func crawl(urls []URL) map[URL]([]URL) {
-	//URL -> []URL
-	log.Println("Starting the crawler")
-	pageLinks := make(map[URL]([]URL))
+func crawl(urls []URL, cache map[URL]bool) (results map[URL]([]URL)) {
+	results = make(map[URL]([]URL))
 
-	pendingSearch := urls
-
-	rounds := 5
-	for ind := rounds; ind > 0; ind-- {
-		log.Println("Round ", ind)
-		results := make(chan parallelFetchReturnPair)
-		var nextSearch []URL
-		var threadCount int = 0
-
-	SearchTerms:
-		for _, term := range pendingSearch {
-			_, urlAlreadyQueried := pageLinks[term]
-			if urlAlreadyQueried {
-				continue SearchTerms
-			}
-			go parallelFetch(term, results)
-			threadCount++
+	workerResultChannel := make(chan parallelFetchReturnPair)
+	workerCount := 0
+	for _, link := range urls {
+		_, inCache := cache[link]
+		if inCache {
+			continue
 		}
-		log.Println("Amount of Links Being Searched: ", threadCount)
-		for i := 0; i < threadCount; i++ {
-			nextPair := <-results
-			pageLinks[nextPair.url] = make([]url.URL, len(nextPair.results))
-			copy(pageLinks[nextPair.url], nextPair.results)
-			nextSearch = append(nextSearch, nextPair.results...)
-		}
-		log.Println("Amount of Links Found: ", len(nextSearch))
-		pendingSearch = make([]url.URL, len(nextSearch))
-		copy(pendingSearch, nextSearch)
+		go parallelFetch(link, workerResultChannel)
+		workerCount++
 	}
+FetchLoop:
+	for i := 0; i < workerCount; i++ {
+		select {
+		case result := <-workerResultChannel:
+			results[result.url] = make([]URL, len(result.results))
+			results[result.url] = result.results
+		case <-time.After(30 * time.Second):
+			break FetchLoop
+		}
 
-	return pageLinks
+	}
+	return
 }
 
 type parallelFetchReturnPair struct {
