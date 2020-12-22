@@ -1,23 +1,9 @@
 package main
 
 import (
-	"bufio"
 	"log"
 	"net/url"
-	"os"
 )
-
-func runCrawl(firstURL URL) {
-	cache := map[URL]bool{}
-	results := crawl(
-		[]URL{firstURL},
-		cache,
-	)
-
-	for parentURL, links := range results {
-		log.Println(parentURL, len(links))
-	}
-}
 
 func main() {
 	//content, _ := fetchPage()
@@ -32,16 +18,39 @@ func main() {
 	// 	fmt.Println(strings[link].String())
 	// }
 	//http://www.ics.uci.edu/~thornton/ics45c/ProjectGuide/
-	log.Println("Crawler")
+	log.Println("Running go-web-crawler")
 
-	reader := bufio.NewReader(os.Stdin)
-	text, _ := reader.ReadString('\n')
-	firstURL, ok := url.Parse(text)
+	firstURL, ok := url.Parse("http://www.ics.uci.edu/~thornton/ics45c/ProjectGuide/")
 
 	if ok != nil {
 		log.Fatal("Error parsing first URL")
 		return
 	}
+	cache := map[URL]bool{}
+	pending := []URL{*firstURL}
+	for range numbersUpTo(0, 4) {
+		log.Println("New Round")
+		log.Println("Proccessing ", len(pending), " links")
+		log.Println("...")
+		results := crawl(
+			pending,
+			cache,
+		)
 
-	runCrawl(*firstURL)
+		for key, links := range results {
+			cache[key] = true
+			for _, link := range links {
+				pending = append(pending, link)
+			}
+
+		}
+
+	}
+}
+
+func numbersUpTo(start, stop int) (out []int) {
+	for i := start; i < stop; i++ {
+		out = append(out, i)
+	}
+	return
 }

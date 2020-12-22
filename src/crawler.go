@@ -23,7 +23,7 @@ FetchLoop:
 		case result := <-workerResultChannel:
 			results[result.url] = make([]URL, len(result.results))
 			results[result.url] = result.results
-		case <-time.After(30 * time.Second):
+		case <-time.After(10 * time.Second):
 			break FetchLoop
 		}
 
